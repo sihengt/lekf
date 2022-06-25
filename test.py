@@ -2,7 +2,7 @@
 # https://github.com/rlabbe/filterpy
 
 import torch
-import kf
+import kalman_filter as kf
 from scipy.linalg import block_diag
 import matplotlib.pyplot as plt
 from collections import defaultdict
@@ -212,11 +212,12 @@ def test_noisy_1d():
         zs.append(z)
 
         # perform kalman filtering
-        f.update(z)
-        f.predict()
+        f.forward(None, z)
+        # f.update(z)
+        # f.predict()
 
         # save data
-        results.append(f.x[0, 0])
+        results.append(f.x[0, 0].detach().numpy())
         measurements.append(z)
 
     # plot data
@@ -255,7 +256,7 @@ def test_noisy_11d():
         f.predict()
 
         # save data
-        results.append(f.x[0])
+        results.append(f.x[0].detach().numpy())
         measurements.append(z)
 
     # plot data
