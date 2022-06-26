@@ -5,9 +5,12 @@ from torch import nn
 from kalman_filter import KalmanFilter as kf
 
 class KalmanCorrector(nn.module):
-    # TODO: perhaps create variables for first last layer, and NN layers instead.
-    def __init__(self, size_list=[6, 64, 128, 128, 128, 6]):
+    # TODO: perhaps create variables for first & last layer, and NN layers instead.
+    # If assuming state equation covariance to be the identity matrix, you only have to predict n_state terms.
+    def __init__(self, n_states, size_list=[6, 64, 128, 128, 128, 6]):
         super().__init__()
+        self.n_states = n_states
+        assert(self.n_states == size_list[0] and self.n_states == size_list[-1])
         layers = []
         self.size_list = size_list
         for i in range(len(size_list) - 2):
@@ -15,13 +18,28 @@ class KalmanCorrector(nn.module):
             layers.append(nn.GELU())
         layers.append(nn.Linear(size_list[-2], size_list[-1]))
         self.net = nn.Sequential(*layers)
-        self.imu = kf.IMUPreintegrator(reset=True, prop_cov=False)
+        self.kf = kf.IMUPreintegrator(reset=True, prop_cov=False)
     
     def forward(self, data):
-        pass
+        # Assumes correction output.
+        x = data['state']
+        u = data['control']
+        z = data['z']
+        F = data['F'] # State transition function
+        B = data['B'] # Control transition function
+        H = data['H'] # Measurement function
+        R = data['R'] # Measurement noise
+        Q = data['Q'] # Process noise
+
+        correction_output = self.net(x) # TODO: insert state here, get correction from here.
+        for i in range(self.n_states):
+            Q[i][i] + correction_output[i]
+        
+        return self.kf.forward(u, z, B=B, F=F, Q=Q, R=R, H=H)
 
 def train():
     pass
+
 def test():
     pass
 
